@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direct → Indirect | CSP Transition Playbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F7FB; --surface:#FFFFFF; --ink:#13213C; --muted:#56688A; --line:#DBE3F0;
+  --partner:#0D5FD6; --partner-bg:#E8F0FE;
+  --ptc:#7434D8; --ptc-bg:#F1EAFD;
+  --provider:#0B8A7D; --provider-bg:#E3F6F3;
+  --customer:#C46A05; --customer-bg:#FDF1E0;
+  --msft:#49566E; --msft-bg:#EDF0F6;
+  --warn-bg:#FFF6E5; --warn-line:#F0C775; --warn-ink:#7A4D06;
+  --danger:#B42318; --danger-bg:#FDECEA;
+  --ok:#137A4B; --ok-bg:#E5F5EC;
+  --radius:14px;
+  font-size:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Bricolage Grotesque',sans-serif;line-height:1.2;letter-spacing:-0.01em}
+a{color:var(--partner)}
+button{font-family:inherit;cursor:pointer}
+.mono{font-family:'JetBrains Mono',monospace;font-size:.82em}
+
+/* ---------- header ---------- */
+header.site{background:linear-gradient(135deg,#0E1B38 0%,#142A5C 55%,#0D5FD6 130%);color:#fff;padding:34px 24px 28px}
+.site-inner{max-width:1120px;margin:0 auto}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#9DC2FF;margin-bottom:10px}
+header.site h1{font-size:clamp(1.5rem,3.4vw,2.3rem);font-weight:800;max-width:760px}
+header.site h1 .arrow{color:#6EE7D8}
+header.site p.sub{margin-top:10px;max-width:720px;color:#C6D6F2;font-size:.95rem}
+.legal-strip{margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 14px;font-size:.78rem;color:#DCE7FA}
+.legal-strip b{color:#fff}
+
+/* ---------- layout ---------- */
+.shell{max-width:1120px;margin:0 auto;padding:0 24px 80px;display:grid;grid-template-columns:248px 1fr;gap:28px;align-items:start}
+nav.side{position:sticky;top:14px;margin-top:26px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px;max-height:calc(100vh - 28px);overflow:auto}
+nav.side .nav-group{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:12px 12px 4px}
+nav.side button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:9px 12px;font-size:.88rem;font-weight:500;color:var(--ink)}
+nav.side button:hover{background:#EFF3FA}
+nav.side button.active{background:var(--ink);color:#fff}
+nav.side button .stepnum{font-family:'JetBrains Mono',monospace;font-size:.68rem;background:#E8EDF7;color:var(--muted);border-radius:6px;min-width:24px;text-align:center;padding:2px 0;flex-shrink:0}
+nav.side button.active .stepnum{background:rgba(255,255,255,.18);color:#fff}
+main{min-width:0;margin-top:26px}
+section.panel{display:none;animation:fade .25s ease}
+section.panel.show{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- cards & common ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px}
+.card h2{font-size:1.35rem;margin-bottom:6px}
+.card h3{font-size:1.05rem;margin:18px 0 8px}
+.card p{margin-bottom:10px;color:#27365A}
+.card p.lead{font-size:1.02rem}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:.92rem;border:1px solid}
+.note.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+.note.danger{background:var(--danger-bg);border-color:#F0B4AE;color:#8A1B12}
+.note.ok{background:var(--ok-bg);border-color:#A9DCC1;color:#0E5C39}
+.note.info{background:#E9F1FE;border-color:#BFD6F8;color:#16438F}
+.note b{font-weight:700}
+.src{font-size:.8rem;color:var(--muted);margin-top:6px}
+.src a{color:var(--muted)}
+ul.clean{list-style:none;margin:8px 0}
+ul.clean li{padding-left:22px;position:relative;margin-bottom:7px;color:#27365A}
+ul.clean li::before{content:"";position:absolute;left:4px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--partner)}
+
+/* role chips */
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px;font-size:.74rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.partner{background:var(--partner-bg);color:var(--partner)}
+.chip.ptc{background:var(--ptc-bg);color:var(--ptc)}
+.chip.provider{background:var(--provider-bg);color:var(--provider)}
+.chip.customer{background:var(--customer-bg);color:var(--customer)}
+.chip.msft{background:var(--msft-bg);color:var(--msft)}
+.chip-row{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0 4px}
+
+/* status pills */
+.status{font-family:'JetBrains Mono',monospace;font-size:.74rem;font-weight:600;border-radius:7px;padding:2px 9px;white-space:nowrap}
+.status.active{background:var(--ok-bg);color:var(--ok)}
+.status.restricted{background:var(--warn-bg);color:#9A6206}
+.status.notenrolled{background:var(--msft-bg);color:var(--msft)}
+
+/* ---------- phase rail (start page) ---------- */
+.rail{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:16px 0 6px}
+.rail .ph{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;cursor:pointer;transition:border-color .15s,transform .15s}
+.rail .ph:hover{border-color:var(--partner);transform:translateY(-2px)}
+.rail .ph .n{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--partner);font-weight:600}
+.rail .ph .t{font-weight:700;font-size:.86rem;margin-top:3px;line-height:1.25}
+.rail .ph .d{font-size:.74rem;color:var(--muted);margin-top:4px;line-height:1.35}
+
+/* ---------- comparison grid ---------- */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+.duo .col{border:1px solid var(--line);border-radius:12px;padding:16px}
+.duo .col h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.duo .col ul.clean li{font-size:.9rem}
+.duo .col.direct{border-top:4px solid var(--partner)}
+.duo .col.indirect{border-top:4px solid var(--provider)}
+.duo .col.indirect ul.clean li::before{background:var(--provider)}
+
+/* ---------- wizard ---------- */
+.wizard{background:linear-gradient(160deg,#10203F,#1B3B7A);border-radius:var(--radius);padding:24px;color:#fff;margin-bottom:18px}
+.wizard h2{color:#fff;font-size:1.3rem}
+.wizard p.wsub{color:#B9CCEE;font-size:.9rem;margin:6px 0 16px}
+.wq{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:16px;margin-bottom:12px}
+.wq .qt{font-weight:700;margin-bottom:10px;font-size:.95rem}
+.wq .qopts{display:flex;flex-wrap:wrap;gap:8px}
+.wq .qopts button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:8px 14px;font-size:.86rem;font-weight:600;transition:background .15s}
+.wq .qopts button:hover{background:rgba(255,255,255,.22)}
+.wq .qopts button.sel{background:#6EE7D8;border-color:#6EE7D8;color:#0B2549}
+.wresult{background:#fff;color:var(--ink);border-radius:12px;padding:18px;margin-top:6px;display:none}
+.wresult.show{display:block;animation:fade .3s ease}
+.wresult h3{font-size:1.05rem;margin-bottom:8px}
+.wresult ol{margin:8px 0 8px 20px}
+.wresult ol li{margin-bottom:7px;font-size:.92rem}
+.wreset{background:none;border:1px solid rgba(255,255,255,.4);color:#CFE0FA;border-radius:8px;padding:6px 12px;font-size:.8rem;margin-top:10px}
+
+/* ---------- step list (checkable workflows) ---------- */
+.progress-wrap{display:flex;align-items:center;gap:12px;margin:12px 0 16px}
+.pbar{flex:1;height:8px;background:#E7EDF7;border-radius:99px;overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--partner),#27B3A2);border-radius:99px;transition:width .3s ease}
+.pcount{font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--muted);white-space:nowrap}
+.steps{counter-reset:step}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.step.done{border-color:#A9DCC1;background:#FBFEFC}
+.step-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer}
+.step-head input[type=checkbox]{margin-top:4px;width:18px;height:18px;accent-color:var(--ok);flex-shrink:0;cursor:pointer}
+.step-head .st{flex:1}
+.step-head .st .t{font-weight:700;font-size:.95rem}
+.step.done .step-head .st .t{color:var(--ok)}
+.step-head .st .who{margin-top:5px}
+.step-head .caret{color:var(--muted);font-size:.8rem;margin-top:5px;transition:transform .2s}
+.step.open .caret{transform:rotate(90deg)}
+.step-body{display:none;padding:0 16px 16px 46px;font-size:.9rem;color:#33425F}
+.step.open .step-body{display:block}
+.step-body ul{margin:6px 0 6px 18px}
+.step-body ul li{margin-bottom:5px}
+.step-body .src{margin-top:10px}
+
+/* ---------- matrix ---------- */
+.filterbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px}
+.filterbar button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:.82rem;font-weight:600;color:var(--muted)}
+.filterbar button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+table.matrix{width:100%;border-collapse:collapse;font-size:.86rem}
+table.matrix th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line)}
+table.matrix td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.matrix tr.hidden{display:none}
+table.matrix td.task{font-weight:600;min-width:180px}
+table.matrix td .detail{display:block;font-weight:400;color:var(--muted);font-size:.8rem;margin-top:3px}
+
+/* ---------- MCA tool ---------- */
+.mca-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.mca-opts button{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;text-align:left;font-size:.86rem;font-weight:600;line-height:1.4;transition:border-color .15s}
+.mca-opts button:hover{border-color:var(--partner)}
+.mca-opts button.sel{border-color:var(--partner);background:var(--partner-bg)}
+.mca-out{display:none;border-radius:12px;padding:16px;font-size:.92rem}
+.mca-out.show{display:block;animation:fade .25s ease}
+
+/* ---------- scenarios ---------- */
+.scen{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.scen-head{display:flex;align-items:center;gap:12px;padding:15px 16px;cursor:pointer}
+.scen-head .sn{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;background:var(--ink);color:#fff;border-radius:7px;padding:3px 8px;flex-shrink:0}
+.scen-head .t{flex:1;font-weight:700;font-size:.94rem}
+.scen-head .caret{color:var(--muted);transition:transform .2s;font-size:.8rem}
+.scen.open .scen-head .caret{transform:rotate(90deg)}
+.scen-body{display:none;padding:0 16px 16px;font-size:.9rem;color:#33425F;border-top:1px dashed var(--line)}
+.scen.open .scen-body{display:block}
+.scen-body .lbl{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:13px 0 5px}
+.scen-body ol{margin:4px 0 4px 18px}
+.scen-body ol li{margin-bottom:5px}
+
+/* ---------- glossary / faq ---------- */
+dl.gloss dt{font-weight:700;margin-top:14px;font-size:.94rem}
+dl.gloss dt .mono{color:var(--partner)}
+dl.gloss dd{color:#33425F;font-size:.9rem;margin-top:3px}
+.faq{border-bottom:1px solid var(--line);padding:13px 0}
+.faq summary{font-weight:700;font-size:.93rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
+.faq summary::after{content:"+";color:var(--partner);font-weight:600}
+.faq[open] summary::after{content:"–"}
+.faq p{margin-top:8px;font-size:.9rem;color:#33425F}
+
+/* ---------- resources ---------- */
+.res{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.res a{display:block;border:1px solid var(--line);border-radius:12px;padding:13px 15px;text-decoration:none;background:var(--surface);transition:border-color .15s}
+.res a:hover{border-color:var(--partner)}
+.res a .rt{font-weight:700;font-size:.88rem;color:var(--ink)}
+.res a .rd{font-size:.78rem;color:var(--muted);margin-top:2px}
+
+.next{display:flex;justify-content:flex-end;margin-top:4px}
+.next button{background:var(--ink);color:#fff;border:0;border-radius:10px;padding:11px 20px;font-weight:700;font-size:.9rem;display:inline-flex;align-items:center;gap:8px}
+.next button:hover{background:#0D5FD6}
+
+footer.site{border-top:1px solid var(--line);background:var(--surface);padding:26px 24px;font-size:.8rem;color:var(--muted)}
+footer.site .fi{max-width:1120px;margin:0 auto}
+
+/* ---------- responsive ---------- */
+@media(max-width:920px){
+  .shell{grid-template-columns:1fr;padding:0 14px 60px}
+  nav.side{position:static;max-height:none;display:flex;overflow-x:auto;gap:4px;padding:8px;margin-top:16px}
+  nav.side .nav-group{display:none}
+  nav.side button{white-space:nowrap;width:auto;flex-shrink:0}
+  .rail{grid-template-columns:repeat(2,1fr)}
+  .duo,.mca-opts,.res{grid-template-columns:1fr}
+  table.matrix{font-size:.8rem}
+  table.matrix td.task{min-width:120px}
+  header.site{padding:26px 16px 22px}
+}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <div class="kicker">CSP Transition Playbook · Microsoft Cloud Solution Provider Program</div>
+    <h1>Direct‑Bill <span class="arrow">→</span> Indirect Reseller<br>The complete, plain‑English transition guide</h1>
+    <p class="sub">A step‑by‑step interactive playbook for moving a CSP Direct‑Bill Partner to the CSP Indirect Reseller model — who does what, who to engage, in what order, and what the official Microsoft process requires. Written for people who are new to these concepts.</p>
+    <div class="legal-strip">⚖️ <span>Verified against <b>Microsoft Learn official documentation</b> · Process details last checked <b>June 2026</b> · Always confirm against the linked sources before acting</span></div>
+  </div>
+</header>
+
+<div class="shell">
+<nav class="side" id="nav"></nav>
+<main id="main">
+<!-- ============ S0 START HERE ============ -->
+<section class="panel" id="s0" data-title="Start here" data-num="◆" data-group="Foundations">
+  <div class="card">
+    <div class="eyebrow">Orientation · read this first</div>
+    <h2>What this transition actually is</h2>
+    <p class="lead">In Microsoft's <b>Cloud Solution Provider (CSP)</b> program, partners resell Microsoft cloud services (Microsoft 365, Azure, Dynamics 365 and more) to their customers. There are two ways to do that — and this playbook moves a partner from the first model to the second.</p>
+    <div class="duo">
+      <div class="col direct">
+        <h4><span class="chip partner">Direct‑Bill Partner</span> "Tier 1"</h4>
+        <ul class="clean">
+          <li>Buys cloud products <b>directly from Microsoft</b> and bills customers itself.</li>
+          <li>Owns the full stack: billing, invoicing, customer support, compliance, API integration.</li>
+          <li>Must keep meeting Microsoft's requirements, including <b>≥ USD $1 million</b> in CSP annual revenue over the trailing 12 months, an eligible <b>support plan</b> (Advanced Support for Partners or Premier), Microsoft's <b>security requirements</b> (MFA for admins, a named security contact, 24‑hour alert response), and at least one <b>Solutions Partner designation</b>.</li>
+        </ul>
+      </div>
+      <div class="col indirect">
+        <h4><span class="chip provider">Indirect Reseller</span> "Tier 2"</h4>
+        <ul class="clean">
+          <li>Buys cloud products <b>through an Indirect Provider</b> (an authorized distributor) instead of from Microsoft directly.</li>
+          <li>The provider handles billing with Microsoft, can purchase products for your customers, and supplies support infrastructure, training, marketing and credit terms.</li>
+          <li><b>No direct billing relationship with Microsoft</b> and no revenue minimum — the partner keeps the customer relationship and keeps selling.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note info"><b>Why partners transition:</b> most commonly because they no longer meet (or don't want to maintain) the direct‑bill requirements above. If a direct‑bill partner doesn't meet them, Microsoft requires the partner to transition to indirect reseller status to stay authorized to transact in CSP. Some partners also transition voluntarily to reduce operational overhead.</div>
+    <p class="src">Sources: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/direct-partner-new-requirements" target="_blank">Requirements for CSP direct‑bill partners</a> · <a href="https://learn.microsoft.com/en-us/partner-center/enroll/csp-supported-partner-relationships" target="_blank">Supported CSP partner relationships</a></p>
+  </div>
+
+  <div class="card">
+    <h2>The whole journey in six phases</h2>
+    <p>Click any phase to jump to its detailed workflow. Every step in this guide is tagged with <b>who performs it</b>: <span class="chip partner">Partner</span> <span class="chip ptc">PTC Consultant</span> <span class="chip provider">Indirect Provider</span> <span class="chip customer">Customer</span> <span class="chip msft">Microsoft</span></p>
+    <div class="rail">
+      <div class="ph" data-go="s2"><div class="n">PHASE 1</div><div class="t">Assess</div><div class="d">Check the direct‑bill enrollment status — it decides your path.</div></div>
+      <div class="ph" data-go="s3"><div class="n">PHASE 2</div><div class="t">Enroll</div><div class="d">Enroll as an indirect reseller — same tenant or a new one.</div></div>
+      <div class="ph" data-go="s4"><div class="n">PHASE 3</div><div class="t">Find a provider</div><div class="d">Choose an Indirect Provider and accept their invitation.</div></div>
+      <div class="ph" data-go="s5"><div class="n">PHASE 4</div><div class="t">Connect customers</div><div class="d">Establish reseller relationships, consent, MCA, GDAP.</div></div>
+      <div class="ph" data-go="s6"><div class="n">PHASE 5</div><div class="t">Transfer</div><div class="d">Move subscriptions to the provider's billing account.</div></div>
+      <div class="ph" data-go="s7"><div class="n">PHASE 6</div><div class="t">Operate</div><div class="d">Run as an indirect reseller, enroll in incentives.</div></div>
+    </div>
+  </div>
+
+  <div class="wizard" id="wizard">
+    <h2>🧭 Path Finder — answer 3 questions</h2>
+    <p class="wsub">Get the exact route, in order, for your situation. Nothing is saved — this runs entirely in your browser.</p>
+    <div class="wq">
+      <div class="qt">1 · What is the partner's CSP direct‑bill enrollment status in Partner Center? <span style="font-weight:400;color:#A9BEE6">(Not sure? Phase 1 shows you exactly where to look.)</span></div>
+      <div class="qopts" data-q="status">
+        <button data-v="active">Active</button>
+        <button data-v="restricted">Restricted</button>
+        <button data-v="unknown">I don't know yet</button>
+      </div>
+    </div>
+    <div class="wq">
+      <div class="qt">2 · Has the partner already chosen an Indirect Provider (distributor)?</div>
+      <div class="qopts" data-q="provider">
+        <button data-v="yes">Yes — already agreed</button>
+        <button data-v="no">No — still to choose</button>
+      </div>
+    </div>
+    <div class="wq">
+      <div class="qt">3 · Does the partner still have traditional (legacy) subscriptions — legacy license‑based offers or classic Azure (pre Azure‑plan)?</div>
+      <div class="qopts" data-q="legacy">
+        <button data-v="yes">Yes</button>
+        <button data-v="no">No — everything is new commerce</button>
+        <button data-v="unsure">Not sure</button>
+      </div>
+    </div>
+    <div class="wresult" id="wresult"></div>
+    <button class="wreset" id="wreset" style="display:none">↺ Reset answers</button>
+  </div>
+  <div class="next"><button data-go="s1">Next: meet the five players →</button></div>
+</section>
+
+<!-- ============ S1 ROLES ============ -->
+<section class="panel" id="s1" data-title="The five players" data-num="◆" data-group="Foundations">
+  <div class="card">
+    <div class="eyebrow">Who is who · responsibilities at a glance</div>
+    <h2>The five players in every transition</h2>
+    <p class="lead">Every action in this playbook belongs to exactly one of these five parties. If you remember nothing else, remember this section.</p>
+
+    <h3><span class="chip partner">Direct‑Bill Partner (the transitioning partner)</span></h3>
+    <p><b>Owns and executes the transition.</b> All Partner Center actions happen in the partner's own tenant under their own credentials: checking status, enrolling as an indirect reseller, accepting the Microsoft Partner Agreement (a legally binding act, performed by a <b>Global admin</b>), inviting customers, and accepting/submitting subscription transfers (performed by an <b>Admin agent</b>). The partner also owns all customer communication — including the contractual obligation to inform customers and obtain their consent before extending a reseller relationship to a provider.</p>
+
+    <h3><span class="chip ptc">PTC Consultant</span></h3>
+    <p><b>Guides, plans and supports — but does not act inside the partner's tenant.</b> The PTC advises the partner on the right path, sequences the work, explains requirements, helps unblock issues, and escalates to the <b>PTC CSP Community</b> when something falls outside this playbook. Think of the PTC as the navigator; the partner drives.</p>
+
+    <h3><span class="chip provider">Indirect Provider (distributor)</span></h3>
+    <p><b>Becomes the partner's commercial backbone after the transition.</b> The provider sends the <b>partnership invitation</b> that links the two accounts in Partner Center, submits orders on customers' behalf, owns the billing relationship with Microsoft, <b>creates the transfer requests</b> for existing subscriptions, attests customer acceptance of the Microsoft Customer Agreement where needed, creates Entra tenants for brand‑new customers (indirect resellers can't), and provides onboarding, support, training, marketing help and credit terms.</p>
+
+    <h3><span class="chip customer">Customer</span></h3>
+    <p><b>Must say yes — twice.</b> Each customer (1) accepts the reseller relationship with the partner <i>and</i> the indirect provider, and (2) must have a valid acceptance of the <b>Microsoft Customer Agreement (MCA)</b> recognized through the indirect provider. Without these, the provider cannot submit orders or transfers for that customer.</p>
+
+    <h3><span class="chip msft">Microsoft</span></h3>
+    <p><b>Verifies, approves and governs.</b> Microsoft verifies business details (account vetting), approves indirect reseller enrollment (usually immediate, up to 5 business days), changes a direct‑bill account from Active to Restricted on request via a support ticket, sends the incentives invitation, and publishes the agreements (MPA/MCA) and program rules that make the whole thing legally valid.</p>
+  </div>
+
+  <div class="card">
+    <h2>Who to engage, for what</h2>
+    <table class="matrix">
+      <tr><th>If you need…</th><th>Engage</th><th>How</th></tr>
+      <tr><td class="task">Guidance on process, sequencing, or blockers</td><td><span class="chip ptc">PTC Consultant</span></td><td>Your assigned PTC; PTCs escalate internally to the PTC CSP Community channel</td></tr>
+      <tr><td class="task">Direct‑bill status moved from Active → Restricted, verification issues, enrollment errors</td><td><span class="chip msft">Microsoft</span></td><td>Service request via <a href="https://partner.microsoft.com/dashboard/v2/support/servicerequests" target="_blank">Partner Center support</a></td></tr>
+      <tr><td class="task">Commercial terms, onboarding, ordering, billing, transfer requests, MCA attestation</td><td><span class="chip provider">Indirect Provider</span></td><td>Provider's partner/onboarding team (after the partnership invitation is accepted)</td></tr>
+      <tr><td class="task">Consent, reseller relationship acceptance, MCA acceptance</td><td><span class="chip customer">Customer</span></td><td>Partner sends the Partner Center invitation emails and explains the change</td></tr>
+      <tr><td class="task">All Partner Center actions (enroll, accept agreements, invite, transfer)</td><td><span class="chip partner">Partner</span></td><td>Global admin (enrollment, agreements, invitations) or Admin agent (customer relationships, transfers)</td></tr>
+    </table>
+  </div>
+  <div class="next"><button data-go="s2">Start Phase 1: Assess →</button></div>
+</section>
+
+<!-- ============ S2 ASSESS ============ -->
+<section class="panel" id="s2" data-title="Assess status" data-num="1" data-group="The playbook">
+  <div class="card">
+    <div class="eyebrow">Phase 1 · everything depends on this</div>
+    <h2>Check the direct‑bill enrollment status</h2>
+    <p class="lead">The partner's current <b>direct‑bill enrollment status</b> determines which enrollment path is available. Check it before anything else. Tick each step as you go.</p>
+    <div class="progress-wrap"><div class="pbar"><i></i></div><span class="pcount">0 / 5 done</span></div>
+    <div class="steps" data-progress>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Sign in to Partner Center</div><div class="who chip-row"><span class="chip partner">Partner — Global admin</span><span class="chip ptc">PTC guides</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Go to <a href="https://partner.microsoft.com/dashboard/home" target="_blank">partner.microsoft.com</a> and sign in with <b>Global admin</b> credentials for the direct‑bill tenant.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Open Account Settings</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Select <b>Settings (gear icon) → Account settings</b> from the menu.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Go to the Programs tab</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Under Account settings, open the <b>Programs</b> tab. This lists every program the account is enrolled in.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Read the CSP direct‑bill status</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Find the <b>Cloud Solution Provider</b> section. You'll see one of:
+          <ul>
+            <li><span class="status active">ACTIVE</span> — currently transacting as a direct‑bill partner.</li>
+            <li><span class="status restricted">RESTRICTED</span> — no longer eligible to transact as direct‑bill (e.g., requirements not met).</li>
+            <li><span class="status notenrolled">NOT ENROLLED</span> — not a direct‑bill partner (this playbook's transition doesn't apply; see the standard <a href="https://learn.microsoft.com/en-us/partner-center/enroll/indirect-reseller-tasks-in-partner-center" target="_blank">indirect reseller enrollment</a> instead).</li>
+          </ul></div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Check for an existing Indirect Reseller enrollment</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">On the same Programs tab, look for an <b>Indirect Reseller</b> entry. If it already shows as enrolled, the partner may have started (or completed) the transition before — confirm before redoing Phase 2.</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What the status means for your path</h2>
+    <div class="duo">
+      <div class="col" style="border-top:4px solid #9A6206">
+        <h4><span class="status restricted">RESTRICTED</span> → Path A · same tenant</h4>
+        <p style="font-size:.9rem">You can enroll as an indirect reseller <b>on the existing direct‑bill tenant</b>. One tenant runs both the legacy direct business (wind‑down) and the new indirect business. This is the standard route once status is Restricted — Microsoft only allows same‑tenant enrollment in Restricted status.</p>
+      </div>
+      <div class="col" style="border-top:4px solid #137A4B">
+        <h4><span class="status active">ACTIVE</span> → Path B · new tenant <i style="font-weight:400;font-size:.8rem">(or convert to Restricted)</i></h4>
+        <p style="font-size:.9rem">Two options: <b>(B1)</b> create a <b>new Entra tenant + new business location/PartnerID</b> and enroll that new tenant as the indirect reseller — direct‑bill keeps running on the old tenant during migration. <b>(B2)</b> ask <a href="https://partner.microsoft.com/dashboard/v2/support/servicerequests" target="_blank">Microsoft Support</a> to move the account from Active → Restricted, then follow Path A on the same tenant.</p>
+      </div>
+    </div>
+    <div class="note warn"><b>Understand "Restricted" before requesting it.</b> Restricted direct‑bill means the partner can no longer grow its direct business (e.g., new customer acquisition and new direct orders stop) — existing subscriptions continue. Review <a href="https://learn.microsoft.com/en-us/partner-center/benefits/restricted-direct-bill-capabilities" target="_blank">restricted direct‑bill capabilities</a> with the partner before choosing option B2.</div>
+    <div class="note info"><b>Microsoft's own recommendation:</b> keeping <b>two separate tenants</b> (one direct‑bill, one indirect reseller) is highly recommended, because enrolling in direct CSP on an indirect reseller tenant overrides the indirect reseller features. Factor this in if the partner plans to ever return to direct‑bill.</div>
+    <p class="src">Source: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Switch direct‑bill partner to indirect reseller — Microsoft Learn</a></p>
+  </div>
+  <div class="next"><button data-go="s3">Phase 2: Enroll →</button></div>
+</section>
+
+<!-- ============ S3 ENROLL ============ -->
+<section class="panel" id="s3" data-title="Enroll as reseller" data-num="2" data-group="The playbook">
+  <div class="card">
+    <div class="eyebrow">Phase 2 · two paths, pick the one your status allows</div>
+    <h2>Enroll in the Indirect Reseller program</h2>
+    <p class="lead">Use <b>Path A</b> if the direct‑bill status is <span class="status restricted">RESTRICTED</span> (same tenant). Use <b>Path B</b> if it is <span class="status active">ACTIVE</span> and the partner wants a clean new reseller tenant.</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Path A — Restricted status · enroll on the <u>same</u> tenant</h3>
+    <div class="progress-wrap"><div class="pbar"><i></i></div><span class="pcount">0 / 6 done</span></div>
+    <div class="steps" data-progress>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Make sure the partner profile and PartnerID are current</div><div class="who chip-row"><span class="chip partner">Partner</span><span class="chip ptc">PTC checks</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Outdated legal info or PartnerIDs are the most common cause of enrollment delays. Verify under <b>Account settings → Legal info</b> before starting.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Sign in as Global admin of the direct‑bill tenant</div><div class="who chip-row"><span class="chip partner">Partner — Global admin</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Use <a href="https://partner.microsoft.com/dashboard/home" target="_blank">Partner Center</a>. The enrolling account must be a Global admin of the tenant being transitioned.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Account settings → Programs → "Get started" on Indirect Reseller</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">On the <b>Programs</b> page, find the indirect reseller program and select <b>Get started</b>.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Review the enrollment form, then select "Enroll now"</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Confirm the pre‑filled partner details are accurate (they flow from the legal profile), then submit with <b>Enroll now</b>.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Wait for approval, then sign in again</div><div class="who chip-row"><span class="chip msft">Microsoft approves</span><span class="chip partner">Partner monitors</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Approval is <b>usually immediate but can take up to 5 business days</b>. A notification goes to the primary contact email from the form. Status can be checked at <b>Settings → Account settings → Legal info → Program info</b>.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Accept the Microsoft Partner Agreement (MPA) — legally binding</div><div class="who chip-row"><span class="chip partner">Partner — Global admin</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">After approval, the indirect reseller agreement appears on the <a href="https://aka.ms/accountexp/agreements" target="_blank">Agreements page</a>. Select <b>Accept</b> for the corresponding Microsoft Partner Agreement — this is the act that <b>enables indirect reseller capabilities</b>, and it is a binding contract that must be accepted by an authorized representative. Afterwards the partner profile shows <b>both</b> programs (direct‑bill and indirect reseller) with their own statuses. Note: without an accepted MPA, the reseller can't transact with any distributor, and since <b>Sept 1, 2025</b> Microsoft blocks orders at transaction time if the reseller fails Partner‑of‑Record validation.</div></div>
+    </div>
+    <p class="src">Source: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Switch direct‑bill partner to indirect reseller — "Get started"</a> · <a href="https://learn.microsoft.com/en-us/partner-center/enroll/mpa-indirect-provider-faq" target="_blank">MPA FAQ</a></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Path B — Active status · set up a <u>new</u> reseller CSP tenant</h3>
+    <div class="progress-wrap"><div class="pbar"><i></i></div><span class="pcount">0 / 6 done</span></div>
+    <div class="steps" data-progress>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Add a new partner business location (creates a new PartnerID)</div><div class="who chip-row"><span class="chip partner">Partner — Global admin</span><span class="chip msft">Microsoft verifies</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">In the <b>Partner Global Account (PGA)</b> tenant: <b>Account settings (gear) → Org Profile → Legal → Partner tab → Business locations → Add</b>. Provide the business name, address and contact details for the location. Adding the location generates a <b>new PartnerID</b> that will be used for the future CSP (indirect reseller) transactions. New locations go through business verification and must satisfy regional compliance.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Create a new Microsoft Entra ID tenant</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Follow the official quickstart: <a href="https://learn.microsoft.com/en-us/entra/fundamentals/create-new-tenant" target="_blank">Create a new tenant in Microsoft Entra ID</a>. This tenant will host the indirect reseller business, separate from the direct‑bill tenant.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Start the indirect reseller enrollment for the new tenant</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Begin at the official <a href="https://aka.ms/accounts/varEnrollment" target="_blank">enrollment welcome page</a>, then complete the <a href="https://learn.microsoft.com/en-us/partner-center/enroll/indirect-reseller-tasks-in-partner-center" target="_blank">indirect reseller enrollment tasks</a>. The organization needs an active Microsoft AI Cloud Partner Program (MAICPP) enrollment with vetting authorized.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Monitor account verification</div><div class="who chip-row"><span class="chip msft">Microsoft verifies</span><span class="chip partner">Partner monitors</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Track verification in Partner Center under <a href="https://partner.microsoft.com/dashboard/account/v3/organization/legalinfo" target="_blank">Account settings → Legal info</a>. Plan for roughly <b>2–3 weeks</b>; respond quickly to any document requests (see <a href="https://learn.microsoft.com/en-us/partner-center/enroll/verification-responses" target="_blank">verification guidance</a>).</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Accept the Microsoft Partner Agreement (MPA) — legally binding</div><div class="who chip-row"><span class="chip partner">Partner — Global admin</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Accept the MPA on the <a href="https://aka.ms/accountexp/agreements" target="_blank">Agreements page</a> <b>from the new reseller tenant</b>. The MPA must be accepted for <b>each CSP tenant</b> the reseller transacts from.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Decide what happens to the direct‑bill tenant</div><div class="who chip-row"><span class="chip partner">Partner</span><span class="chip ptc">PTC advises</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">The direct‑bill tenant keeps serving existing customers during the migration. Plan its wind‑down: as customers and subscriptions move (Phases 4–5), direct‑bill activity shrinks until the enrollment is eventually restricted or relinquished. Keeping the two tenants separate matches Microsoft's recommendation.</div></div>
+    </div>
+    <div class="note warn"><b>Heads‑up on capability loss:</b> sandbox and Partner Center API/SDK capabilities are <b>direct‑bill only</b>. Once the partner finishes transitioning to indirect reseller, access to the sandbox and the commerce APIs is lost. If the partner has storefront integrations, plan replacements with the indirect provider early.</div>
+    <p class="src">Sources: internal SOP (PTC) · <a href="https://learn.microsoft.com/en-us/partner-center/enroll/indirect-reseller-tasks-in-partner-center" target="_blank">Indirect reseller tasks in Partner Center</a> · <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide</a></p>
+  </div>
+  <div class="next"><button data-go="s4">Phase 3: Find a provider →</button></div>
+</section>
+
+<!-- ============ S4 PROVIDER ============ -->
+<section class="panel" id="s4" data-title="Find a provider" data-num="3" data-group="The playbook">
+  <div class="card">
+    <div class="eyebrow">Phase 3 · choose your distributor and connect accounts</div>
+    <h2>Partner with an Indirect Provider</h2>
+    <p class="lead">An indirect reseller can't transact alone — an <b>Indirect Provider</b> (distributor) buys from Microsoft on the partner's behalf, handles billing, and submits orders. This phase picks the provider and links the two Partner Center accounts.</p>
+    <div class="progress-wrap"><div class="pbar"><i></i></div><span class="pcount">0 / 5 done</span></div>
+    <div class="steps" data-progress>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Search the official provider list</div><div class="who chip-row"><span class="chip partner">Partner</span><span class="chip ptc">PTC advises</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">If the partner isn't already working with one, search Microsoft's official directory: <a href="https://partner.microsoft.com/membership/cloud-solution-provider/find-a-provider" target="_blank">Find an indirect provider</a>. Only providers authorized by Microsoft for the partner's region count. After IR enrollment, an <b>Indirect providers</b> link also appears in the Partner Center left navigation.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Evaluate and shortlist providers</div><div class="who chip-row"><span class="chip partner">Partner</span><span class="chip ptc">PTC advises</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Providers differ widely. Compare them on: technical training and assistance · marketing support · financing and credit terms · support model and SLAs · regional coverage · migration/onboarding tooling. Most established providers offer the first three.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Contact the provider and agree terms</div><div class="who chip-row"><span class="chip partner">Partner</span><span class="chip provider">Provider</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Discuss the reseller program, support arrangements, margins and contract terms. This is a commercial agreement between partner and provider — Microsoft is not a party to it.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Provider sends the partnership invitation email</div><div class="who chip-row"><span class="chip provider">Provider sends</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Once both sides agree, the provider emails a <b>partnership invitation</b> containing a personalized link into Partner Center that associates the partner's account with the provider's account.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Accept the invitation as Global admin</div><div class="who chip-row"><span class="chip partner">Partner — Global admin</span></div></div><span class="caret">▶</span></div>
+        <div class="step-body">Someone with <b>Global admin</b> permissions signs in to Partner Center through the invitation link and accepts. The provider then appears in the partner's <b>Indirect providers</b> list — this is the switch that later makes the relationship‑extension and customer‑invitation tools work.</div></div>
+    </div>
+    <div class="note info"><b>Multiple providers are allowed.</b> A reseller can hold relationships with more than one indirect provider (e.g., different providers for different product lines or regions) — each requires its own invitation and acceptance.</div>
+    <p class="src">Sources: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide — "Find an indirect provider"</a> · <a href="https://learn.microsoft.com/en-us/partner-center/enroll/indirect-reseller-tasks-in-partner-center" target="_blank">Work with indirect providers in CSP</a></p>
+  </div>
+  <div class="next"><button data-go="s5">Phase 4: Connect customers →</button></div>
+</section>
+
+<!-- ============ S5 CUSTOMERS ============ -->
+<section class="panel" id="s5" data-title="Connect customers" data-num="4" data-group="The playbook">
+  <div class="card">
+    <div class="eyebrow">Phase 4 · the legally sensitive phase — consent and agreements</div>
+    <h2>Connect existing customers to the provider</h2>
+    <p class="lead">The provider <b>cannot submit orders or transfers for a customer until a reseller relationship exists</b> between that customer and the provider. For each existing direct‑bill customer there are two official ways to create it — choose per customer.</p>
+    <div class="duo">
+      <div class="col" style="border-top:4px solid var(--partner)">
+        <h4>Method 1 · Reseller relationship <b>extension</b></h4>
+        <ul class="clean">
+          <li>Extends your existing direct‑bill customer relationships to the provider via a templated email with a unique acceptance link.</li>
+          <li>Only available to direct‑bill partners <b>who completed IR enrollment</b> (Phase 2), only for <b>existing direct‑bill customers</b>, and only with providers whose invitation you accepted (Phase 3).</li>
+          <li>A copy of the customer's <b>bill‑to information is shared with the provider</b>.</li>
+          <li>The provider gets <b>no admin privileges</b> in the customer tenant.</li>
+        </ul>
+      </div>
+      <div class="col" style="border-top:4px solid var(--provider)">
+        <h4>Method 2 · Indirect reseller <b>invitation</b></h4>
+        <ul class="clean">
+          <li>Invites the customer to establish a reseller relationship with <b>you and the provider at the same time</b> via a personalized link in a draft email you can edit (keep the link!).</li>
+          <li>Works for existing direct‑bill customers <b>and</b> new customers with an existing Entra tenant.</li>
+          <li>Use this method when the provider needs delegated admin access (GDAP) — the extension can't grant it.</li>
+          <li>After acceptance, you can manage the customer's subscriptions, licenses and users; the provider can submit orders.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note danger"><b>⚖️ Contractual obligation — read this twice.</b> Before using the reseller relationship <b>extension</b>, the partner is <b>contractually obliged by the partner agreement to inform the customer and obtain their consent</b> to establishing the relationship between that customer and the indirect provider. Using the extension also constitutes consent to sharing the customer's bill‑to information with the provider. Document the customer's consent before clicking.</div>
+
+    <h3>How to run Method 1 (extension)</h3>
+    <ol style="margin:6px 0 14px 20px;font-size:.92rem">
+      <li>Sign in to Partner Center as an <b>Admin agent</b> <span class="chip partner">Partner</span> and open the <b>Customers</b> workspace.</li>
+      <li>In the <b>Customer list</b>, select <b>New relationship</b> from the action menu.</li>
+      <li>A templated email opens with a unique acceptance link — send it to the customer (after consent is on record).</li>
+      <li>The customer accepts <span class="chip customer">Customer</span> — they're authorizing you as their local reseller of record; the provider then appears as a CSP partner on the customer's Microsoft 365 Admin Center <b>Partner relationships</b> page.</li>
+    </ol>
+
+    <h3>How to run Method 2 (invitation)</h3>
+    <ol style="margin:6px 0 14px 20px;font-size:.92rem">
+      <li>Sign in as <b>Admin agent</b> <span class="chip partner">Partner</span> → <b>Customers</b> → <b>Invite new customers</b> (for brand‑new IR customers, start from <b>Indirect providers → Invite new customers</b> instead).</li>
+      <li>Review the draft email; edit the wording if needed but <b>never remove the link</b> — it's personalized to connect the customer to both your account and the provider's account.</li>
+      <li>Select <b>Done</b> and send the email.</li>
+      <li>The customer accepts <span class="chip customer">Customer</span>, authorizing you and the provider as resellers of record.</li>
+      <li>Request <a href="https://learn.microsoft.com/en-us/partner-center/customers/gdap-faq" target="_blank"><b>GDAP</b> (granular delegated admin permissions)</a> to manage the customer's subscriptions, licenses and users on their behalf — the customer approves the GDAP relationship.</li>
+    </ol>
+    <div class="note info"><b>Brand‑new customers (no tenant yet):</b> indirect resellers can't create Entra tenants for customers in Partner Center. The <b>provider creates the tenant</b> and names you as the indirect reseller, which makes the customer appear in your customer list. Also: you can't use leftover direct‑bill capability to purchase for customers acquired as an indirect reseller.</div>
+    <p class="src">Source: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide — "Move your direct‑bill customers to your indirect provider"</a></p>
+  </div>
+
+  <div class="card">
+    <h2>🖊️ Microsoft Customer Agreement (MCA) checker</h2>
+    <p>Every transitioning customer — existing and new — must have a valid <b>MCA acceptance</b> recognized through the indirect provider. Pick the customer's situation:</p>
+    <div class="mca-opts">
+      <button data-mca="0">Customer <b>hasn't accepted</b> the MCA yet</button>
+      <button data-mca="1">Customer accepted the MCA with us via <b>partner attestation</b></button>
+      <button data-mca="2">Customer accepted the MCA themselves in the <b>Microsoft 365 Admin Center</b></button>
+    </div>
+    <div class="mca-out" id="mcaout"></div>
+    <p class="src">Source: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide — "Microsoft Customer Agreement"</a> · <a href="https://learn.microsoft.com/en-us/partner-center/customers/confirm-customer-agreement" target="_blank">Confirm customer acceptance of the MCA</a></p>
+  </div>
+  <div class="next"><button data-go="s6">Phase 5: Transfer subscriptions →</button></div>
+</section>
+
+<!-- ============ S6 TRANSFER ============ -->
+<section class="panel" id="s6" data-title="Transfer subscriptions" data-num="5" data-group="The playbook">
+  <div class="card">
+    <div class="eyebrow">Phase 5 · move the billing, keep the customer</div>
+    <h2>Transfer subscriptions to the indirect provider</h2>
+    <p class="lead">Indirect resellers have no billing relationship with Microsoft, so every subscription the partner holds as direct‑bill must be <b>transferred to the indirect provider's billing account</b> using the self‑serve subscription transfer in Partner Center.</p>
+    <div class="note warn"><b>Prerequisites — do not skip:</b> for each customer, (1) the customer has a reseller relationship with the indirect provider (Phase 4), and (2) the customer's <b>MCA acceptance is in place through the provider</b>. Transfers can't be tested in sandbox.</div>
+
+    <h3>New commerce (NCE) license‑based &amp; Azure plan — the official transfer flow</h3>
+    <p style="font-size:.9rem">In this transition the <b>source partner = the direct‑bill partner</b> and the <b>target partner = the indirect provider</b>. Only Admin agents can create and approve transfers.</p>
+    <div class="progress-wrap"><div class="pbar"><i></i></div><span class="pcount">0 / 8 done</span></div>
+    <div class="steps" data-progress>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Customer and source partner agree to the transfer</div><div class="who chip-row"><span class="chip customer">Customer</span><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div><div class="step-body">The partner explains the change to the customer and they agree the subscriptions will move to the provider's billing.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Source and target partners align on subscription details</div><div class="who chip-row"><span class="chip partner">Partner</span><span class="chip provider">Provider</span></div></div><span class="caret">▶</span></div><div class="step-body">Agree exactly which subscriptions, terms, quantities and renewal dates are in scope before any request is raised.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Target sends a relationship request to the customer</div><div class="who chip-row"><span class="chip provider">Provider</span></div></div><span class="caret">▶</span></div><div class="step-body">If not already done in Phase 4, the provider establishes its reseller relationship with the customer.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Customer accepts the relationship request</div><div class="who chip-row"><span class="chip customer">Customer</span></div></div><span class="caret">▶</span></div><div class="step-body">Without this acceptance, the transfer request will fail. Confirm in the customer's M365 Admin Center → Partner relationships.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Target creates the transfer request</div><div class="who chip-row"><span class="chip provider">Provider — Admin agent</span></div></div><span class="caret">▶</span></div><div class="step-body">The provider creates the transfer request, including the customer email for notifications and the source partner's Microsoft ID.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Source partner receives the notification</div><div class="who chip-row"><span class="chip partner">Partner</span></div></div><span class="caret">▶</span></div><div class="step-body">The partner gets an email notification of the transfer request (completed transfers are also visible as events in the audit log).</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">Source partner selects subscriptions and submits</div><div class="who chip-row"><span class="chip partner">Partner — Admin agent</span></div></div><span class="caret">▶</span></div><div class="step-body">Open the transfer request, choose which subscriptions transfer, and submit. This is the partner's approval of the transfer.</div></div>
+      <div class="step"><div class="step-head"><input type="checkbox"><div class="st"><div class="t">System completes the move</div><div class="who chip-row"><span class="chip msft">Microsoft (system)</span></div></div><span class="caret">▶</span></div><div class="step-body">A new subscription is created for the customer on the <b>target partner's billing account</b>, and the old one under the source partner's billing account is canceled by the system.</div></div>
+    </div>
+
+    <h3>Traditional (legacy) subscriptions — migrate first, then transfer</h3>
+    <p style="font-size:.92rem">Only <b>new commerce</b> license‑based and Azure types can be transferred between transacting CSP partners. If the partner still holds legacy offers:</p>
+    <ul class="clean">
+      <li><b>Legacy license‑based offers</b> → <a href="https://learn.microsoft.com/en-us/partner-center/customers/migrate-subscriptions-to-new-commerce" target="_blank">migrate to new commerce</a>, then transfer.</li>
+      <li><b>Classic Azure (legacy)</b> → <a href="https://learn.microsoft.com/en-us/partner-center/pricing/azure-plan-transition" target="_blank">migrate to Azure plan</a> (requires the customer's MCA), then transfer.</li>
+    </ul>
+    <div class="note info"><b>Automation option:</b> while still direct‑bill, the partner can also drive transfers via the <a href="https://learn.microsoft.com/en-us/partner-center/developer/create-a-transfer" target="_blank">Partner Center transfer APIs</a> (create / accept / list transfers). Many providers also offer their own migration tooling — ask in Phase 3.</div>
+    <p class="src">Sources: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide — "New commerce transfers"</a> · <a href="https://learn.microsoft.com/en-us/partner-center/customers/transfer-subscriptions" target="_blank">Transfer subscriptions to another partner</a></p>
+  </div>
+  <div class="next"><button data-go="s7">Phase 6: Operate →</button></div>
+</section>
+
+<!-- ============ S7 OPERATE ============ -->
+<section class="panel" id="s7" data-title="Operate & incentives" data-num="6" data-group="The playbook">
+  <div class="card">
+    <div class="eyebrow">Phase 6 · life during and after the transition</div>
+    <h2>Operating in dual mode, then as a pure indirect reseller</h2>
+    <p class="lead">The transition isn't a hard cut‑over. While it runs, the partner is <b>both</b> a direct‑bill partner and an indirect reseller, and manages each customer set differently.</p>
+    <div class="duo">
+      <div class="col direct">
+        <h4>Tasks you keep doing as <span class="chip partner">direct‑bill</span> (until transferred)</h4>
+        <ul class="clean">
+          <li>Purchase / create orders for direct customers' products.</li>
+          <li>View subscriptions and manage order history.</li>
+          <li><b>Bill direct customers yourself</b>, as before.</li>
+          <li>View/download CSP price lists; use sandbox &amp; APIs; add new customer records.</li>
+        </ul>
+      </div>
+      <div class="col indirect">
+        <h4>Tasks you do as an <span class="chip provider">indirect reseller</span></h4>
+        <ul class="clean">
+          <li><b>Request that the provider orders products</b> for your customers.</li>
+          <li>Manage customers' licenses and users (with GDAP).</li>
+          <li>Create service requests on customers' behalf.</li>
+          <li>View customer analytics.</li>
+        </ul>
+      </div>
+    </div>
+    <h3>How to tell which kind a customer is</h3>
+    <p style="font-size:.92rem">In Partner Center → <b>Customers</b>, open a customer's details. If you can see their subscriptions plus <b>Add / View products</b> options, you acquired them as direct‑bill. If those options aren't available, the customer is an indirect‑reseller relationship.</p>
+    <div class="note danger"><b>Capabilities you lose after transitioning:</b> the <b>sandbox</b> and <b>Partner Center API/SDK</b> commerce capabilities are direct‑bill only. Plan any storefront/automation replacements with the provider before the direct‑bill side winds down.</div>
+  </div>
+
+  <div class="card">
+    <h2>Incentives</h2>
+    <ul class="clean">
+      <li>After enrolling as an indirect reseller on the existing direct‑bill tenant, the partner receives an <b>invitation to the Indirect Reseller Incentive program within 30 days</b> <span class="chip msft">Microsoft sends</span>.</li>
+      <li>The invitation is tied to the <b>Microsoft AI Cloud Partner Program (MAICPP)</b> account associated with the CSP tenant, and goes to that account's registered email — make sure it's monitored.</li>
+      <li>The partner remains eligible for <b>direct‑bill incentives on the same tenant</b> during the transition, but the two programs must be <b>managed separately</b>.</li>
+    </ul>
+    <p class="src">Source: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide — "Enroll for indirect reseller incentives"</a></p>
+  </div>
+
+  <div class="card">
+    <h2>Thinking of going back to direct‑bill one day?</h2>
+    <ul class="clean">
+      <li>There's no "conversion" back — the partner <b>re‑applies for direct‑bill using a new tenant</b> after meeting all requirements again (including the $1M trailing‑12‑months CSP revenue, earned as an indirect reseller).</li>
+      <li>A partner that transitioned (or was deauthorized / not approved) must <b>wait one year</b> before reapplying for direct‑bill status.</li>
+      <li>Customers can later be moved from the indirect tenant to the new direct‑bill tenant.</li>
+      <li>This is why Microsoft <b>recommends two separate tenants</b>: enrolling direct CSP on an indirect reseller tenant overrides the indirect reseller features.</li>
+    </ul>
+    <p class="src">Sources: <a href="https://learn.microsoft.com/en-us/partner-center/enroll/direct-partner-new-requirements" target="_blank">Direct‑bill requirements</a> · <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank">Transition guide</a></p>
+  </div>
+  <div class="next"><button data-go="s8">See real‑world scenarios →</button></div>
+</section>
+
+<!-- ============ S8 SCENARIOS ============ -->
+<section class="panel" id="s8" data-title="Scenarios" data-num="◆" data-group="Apply it">
+  <div class="card">
+    <div class="eyebrow">Pattern‑match your situation</div>
+    <h2>Eight scenarios you'll actually meet</h2>
+    <p>Each scenario shows the situation, the correct route through the playbook, and who does what. Click to expand.</p>
+  </div>
+  <div id="scenarios"></div>
+  <div class="next"><button data-go="s9">Open the responsibility matrix →</button></div>
+</section>
+
+<!-- ============ S9 MATRIX ============ -->
+<section class="panel" id="s9" data-title="Who does what" data-num="◆" data-group="Apply it">
+  <div class="card">
+    <div class="eyebrow">The single source of truth for ownership</div>
+    <h2>Responsibility matrix — every task, its owner, and who to engage</h2>
+    <p>Filter by role to see exactly what each party owns across the whole transition.</p>
+    <div class="filterbar" id="rolefilter">
+      <button class="on" data-role="all">All roles</button>
+      <button data-role="partner">Partner</button>
+      <button data-role="ptc">PTC Consultant</button>
+      <button data-role="provider">Indirect Provider</button>
+      <button data-role="customer">Customer</button>
+      <button data-role="msft">Microsoft</button>
+    </div>
+    <table class="matrix" id="raci"><tr><th>Task</th><th>Responsible (does it)</th><th>Supports / approves</th></tr></table>
+  </div>
+  <div class="next"><button data-go="s10">FAQ &amp; glossary →</button></div>
+</section>
+
+<!-- ============ S10 FAQ ============ -->
+<section class="panel" id="s10" data-title="FAQ & glossary" data-num="◆" data-group="Apply it">
+  <div class="card">
+    <h2>Frequently asked questions</h2>
+    <details class="faq"><summary>How long does the whole transition take?</summary><p>It depends on the path and the customer count. Known timelines from the official process: indirect reseller enrollment approval is <b>usually immediate but can take up to 5 business days</b>; account verification for a <b>new</b> tenant typically takes around <b>2–3 weeks</b>; the incentives invitation arrives <b>within 30 days</b> of IR enrollment. Customer relationship acceptance and subscription transfers depend on how quickly customers respond — plan weeks to months for a large book of business.</p></details>
+    <details class="faq"><summary>Do customers lose service during a transfer?</summary><p>The transfer mechanism creates the new subscription on the provider's billing account and the system cancels the old one — it's a billing‑side move designed for continuity, not a service teardown. Still, coordinate timing, renewal dates and any provisioning specifics with the indirect provider per subscription, and communicate the change to the customer first (for the relationship extension, informing the customer and getting consent is contractually required).</p></details>
+    <details class="faq"><summary>Does the partner lose its customer relationships?</summary><p>No. The customer remains the partner's customer; the partner keeps managing licenses, users and support (via GDAP). What changes is the <b>billing chain</b>: Microsoft bills the provider, the provider bills the partner, the partner bills the customer per their own commercial agreement.</p></details>
+    <details class="faq"><summary>Can the partner run direct‑bill and indirect reseller at the same time?</summary><p>Yes — during the transition the profile shows both programs, the partner keeps billing existing direct customers and can simultaneously accept customers from the provider. Direct‑bill and indirect incentives can both be earned on the same tenant but are managed separately. Microsoft nonetheless recommends keeping the two businesses on <b>two separate tenants</b> long‑term, because enrolling direct CSP on an indirect reseller tenant overrides the indirect reseller features.</p></details>
+    <details class="faq"><summary>What exactly stops working in "Restricted" direct‑bill status?</summary><p>Restricted means the partner is no longer eligible to <i>transact</i> as direct‑bill — growth motions stop (such as acquiring new customers and placing new direct orders) while existing subscriptions continue to run. The authoritative list is Microsoft's <a href="https://learn.microsoft.com/en-us/partner-center/benefits/restricted-direct-bill-capabilities" target="_blank">restricted direct‑bill capabilities</a> page — review it before requesting an Active→Restricted change.</p></details>
+    <details class="faq"><summary>Is there a deadline to finish moving customers?</summary><p>Microsoft's documentation notes that partners get a time frame for completing customer and subscription moves before losing the overlapping program access, and direct‑bill restriction itself follows Microsoft's compliance timelines. Treat the transition as a project with a target end date agreed with the provider — and confirm any applicable deadline for the specific account with Microsoft Partner Support.</p></details>
+    <details class="faq"><summary>Why does Partner‑of‑Record (POR) validation matter?</summary><p>Since <b>September 1, 2025</b>, an indirect reseller must have an active CSP indirect reseller tenant and a verified PLA ID to be assigned as Partner of Record on transactions — orders are blocked at transaction time if validation fails (suspension, region mismatch, inactive PLA ID, or missing MPA acceptance). Completing Phase 2 properly is what keeps the partner transactable.</p></details>
+  </div>
+  <div class="card">
+    <h2>Glossary — every acronym in this guide</h2>
+    <dl class="gloss">
+      <dt><span class="mono">CSP</span> — Cloud Solution Provider</dt><dd>Microsoft's program for partners that resell Microsoft cloud services.</dd>
+      <dt>Direct‑Bill Partner (Tier 1)</dt><dd>A CSP partner that buys directly from Microsoft and bills its customers itself.</dd>
+      <dt>Indirect Reseller (Tier 2)</dt><dd>A CSP partner that buys via an Indirect Provider; no direct billing relationship with Microsoft.</dd>
+      <dt>Indirect Provider</dt><dd>A distributor authorized by Microsoft to support indirect resellers — billing, ordering, support infrastructure.</dd>
+      <dt>Partner Center</dt><dd>Microsoft's portal (partner.microsoft.com) where all enrollment, customer and subscription actions happen.</dd>
+      <dt><span class="mono">PGA / PLA</span></dt><dd>Partner Global Account (the org‑level account) / Partner Location Account (a business location under it). Each location has its own PartnerID; CSP transactions are tied to a location's PLA ID.</dd>
+      <dt><span class="mono">PartnerID</span></dt><dd>The identifier generated for a partner location, used for CSP transactions and incentives mapping.</dd>
+      <dt><span class="mono">MAICPP</span> — Microsoft AI Cloud Partner Program</dt><dd>Microsoft's overall partner program; an active MAICPP enrollment is a prerequisite, and incentives invitations are tied to it.</dd>
+      <dt><span class="mono">MPA</span> — Microsoft Partner Agreement</dt><dd>The binding agreement a partner accepts per CSP tenant. Accepting it is what enables indirect reseller capabilities; without it, the reseller can't transact with a distributor.</dd>
+      <dt><span class="mono">MCA</span> — Microsoft Customer Agreement</dt><dd>The agreement every customer must accept; for this transition, acceptance must be recognized through the indirect provider.</dd>
+      <dt><span class="mono">GDAP</span> — Granular Delegated Admin Permissions</dt><dd>Scoped, time‑bound admin access a customer grants the partner to manage their subscriptions, licenses and users.</dd>
+      <dt><span class="mono">NCE</span> — New Commerce Experience</dt><dd>Microsoft's current commerce platform for CSP subscriptions. Only NCE license‑based and Azure‑plan subscriptions can be transferred between partners.</dd>
+      <dt>Azure plan</dt><dd>The NCE construct for Azure in CSP; classic ("legacy") Azure must migrate to Azure plan before transfer.</dd>
+      <dt><span class="mono">POR</span> — Partner of Record</dt><dd>The reseller credited on a transaction; validated by Microsoft at transaction time since Sept 1, 2025.</dd>
+      <dt>Entra ID tenant</dt><dd>The Microsoft identity container (formerly Azure AD) a business runs in; a "new tenant" path means a fresh Entra directory for the reseller business.</dd>
+      <dt>Global admin / Admin agent</dt><dd>Partner Center roles: Global admin handles enrollment and agreements; Admin agent handles customer relationships and transfers.</dd>
+      <dt><span class="mono">PTC</span></dt><dd>Partner Technology/Transformation Consultant — the advisor guiding the partner through this SOP.</dd>
+    </dl>
+  </div>
+  <div class="next"><button data-go="s11">Sources &amp; escalation →</button></div>
+</section>
+
+<!-- ============ S11 RESOURCES ============ -->
+<section class="panel" id="s11" data-title="Sources & escalation" data-num="◆" data-group="Apply it">
+  <div class="card">
+    <div class="eyebrow">When you're stuck</div>
+    <h2>Escalation paths</h2>
+    <ul class="clean">
+      <li><b>PTC Consultants:</b> for anything beyond this playbook, raise it in the <a href="https://teams.microsoft.com/l/channel/19%3Aef1ba87745574438a2fa175149e7f260%40thread.tacv2/General?groupId=0eb6d003-31d6-4f89-a093-9fcb31feafdf&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47" target="_blank">PTC CSP Community (Teams)</a> — internal channel from the SOP.</li>
+      <li><b>Partners:</b> open a <a href="https://partner.microsoft.com/dashboard/v2/support/servicerequests" target="_blank">service request in Partner Center</a> for status changes (Active→Restricted), verification problems, enrollment failures or transfer errors.</li>
+      <li><b>Provider‑side issues</b> (orders, billing, transfer requests, MCA attestation): the indirect provider's partner support team.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Official sources used by this guide</h2>
+    <p style="font-size:.9rem">These Microsoft Learn pages are authoritative and were used to verify this playbook (checked June 2026). If anything here ever conflicts with them, <b>they win</b>.</p>
+    <div class="res">
+      <a href="https://learn.microsoft.com/en-us/partner-center/enroll/transition-direct-to-indirect" target="_blank"><span class="rt">Switch direct‑bill partner to indirect reseller</span><span class="rd">The core official transition procedure — enrollment, providers, customers, transfers, incentives</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/enroll/direct-partner-new-requirements" target="_blank"><span class="rt">Requirements for CSP direct‑bill partners</span><span class="rd">$1M revenue, support plan, security requirements, designations, 1‑year reapply wait</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/enroll/indirect-reseller-tasks-in-partner-center" target="_blank"><span class="rt">Work with indirect providers in CSP</span><span class="rd">Indirect reseller enrollment tasks and provider relationships</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/enroll/verification-responses" target="_blank"><span class="rt">Verify your account information</span><span class="rd">What Microsoft checks during account verification and how to respond</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/customers/transfer-subscriptions" target="_blank"><span class="rt">Transfer subscriptions to another partner</span><span class="rd">Detailed transfer rules — Admin agents, who sends/approves, limitations</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/customers/gdap-faq" target="_blank"><span class="rt">GDAP frequently asked questions</span><span class="rd">Granular delegated admin permissions for managing customers</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/benefits/restricted-direct-bill-capabilities" target="_blank"><span class="rt">Restricted direct‑bill capabilities</span><span class="rd">Exactly what a Restricted direct‑bill account can and can't do</span></a>
+      <a href="https://partner.microsoft.com/membership/cloud-solution-provider/find-a-provider" target="_blank"><span class="rt">Find an indirect provider</span><span class="rd">Microsoft's official, searchable provider directory</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/customers/migrate-subscriptions-to-new-commerce" target="_blank"><span class="rt">Migrate legacy license‑based subscriptions to NCE</span><span class="rd">Required before legacy license‑based offers can transfer</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/pricing/azure-plan-transition" target="_blank"><span class="rt">Transition customers to Azure plan</span><span class="rd">Required before classic Azure subscriptions can transfer</span></a>
+      <a href="https://learn.microsoft.com/en-us/partner-center/enroll/mpa-indirect-provider-faq" target="_blank"><span class="rt">MPA adoption FAQ</span><span class="rd">Why the MPA matters and Partner‑of‑Record validation since Sept 1, 2025</span></a>
+      <a href="https://learn.microsoft.com/en-us/entra/fundamentals/create-new-tenant" target="_blank"><span class="rt">Create a new Microsoft Entra tenant</span><span class="rd">Quickstart used in Path B (new reseller tenant)</span></a>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="site">
+  <div class="fi">
+    <p><b>Accuracy &amp; legal notice.</b> This guide summarizes and operationalizes Microsoft's official documentation (Microsoft Learn, Partner Center) together with an internal SOP for PTC Consultants. Microsoft program rules, agreement terms, revenue thresholds and timelines change; the linked Microsoft Learn pages are the authoritative source and prevail over this guide in any conflict. Acceptance of the Microsoft Partner Agreement (MPA) and Microsoft Customer Agreement (MCA) are legally binding actions — they must be performed by authorized representatives of the partner / customer organization. This guide is process guidance, not legal advice.</p>
+  </div>
+</footer>
+
+<script>
+/* ---------- navigation ---------- */
+const panels=[...document.querySelectorAll('section.panel')];
+const nav=document.getElementById('nav');
+let lastGroup='';
+panels.forEach((p,i)=>{
+  const g=p.dataset.group;
+  if(g!==lastGroup){const h=document.createElement('div');h.className='nav-group';h.textContent=g;nav.appendChild(h);lastGroup=g;}
+  const b=document.createElement('button');
+  const num=p.dataset.num==='◆'?'◆':p.dataset.num;
+  b.innerHTML='<span class="stepnum">'+num+'</span><span>'+p.dataset.title+'</span>';
+  b.addEventListener('click',()=>show(p.id));
+  b.dataset.target=p.id;
+  nav.appendChild(b);
+});
+function show(id){
+  panels.forEach(p=>p.classList.toggle('show',p.id===id));
+  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.target===id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+show('s0');
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-go]');
+  if(go){show(go.dataset.go);}
+});
+
+/* ---------- step checklists ---------- */
+document.querySelectorAll('.steps[data-progress]').forEach(list=>{
+  const wrap=list.parentElement;
+  const bar=wrap.querySelector('.pbar i');
+  const count=wrap.querySelector('.pcount');
+  const steps=[...list.querySelectorAll('.step')];
+  function refresh(){
+    const done=steps.filter(s=>s.querySelector('input').checked).length;
+    if(bar)bar.style.width=(done/steps.length*100)+'%';
+    if(count)count.textContent=done+' / '+steps.length+' done';
+  }
+  steps.forEach(s=>{
+    const head=s.querySelector('.step-head');
+    const cb=s.querySelector('input');
+    head.addEventListener('click',e=>{
+      if(e.target===cb)return;
+      s.classList.toggle('open');
+    });
+    cb.addEventListener('change',()=>{s.classList.toggle('done',cb.checked);refresh();});
+  });
+  refresh();
+});
+
+/* ---------- wizard ---------- */
+const wAns={status:null,provider:null,legacy:null};
+document.querySelectorAll('#wizard .qopts').forEach(grp=>{
+  grp.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      grp.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      wAns[grp.dataset.q]=btn.dataset.v;
+      renderWizard();
+    });
+  });
+});
+document.getElementById('wreset').addEventListener('click',()=>{
+  wAns.status=wAns.provider=wAns.legacy=null;
+  document.querySelectorAll('#wizard .qopts button').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('wresult').classList.remove('show');
+  document.getElementById('wreset').style.display='none';
+});
+function renderWizard(){
+  if(!wAns.status||!wAns.provider||!wAns.legacy)return;
+  const out=document.getElementById('wresult');
+  let html='';
+  if(wAns.status==='unknown'){
+    html+='<h3>First stop: Phase 1 — check the status</h3><p style="font-size:.92rem">The enrollment status decides everything. Go to <a href="#" data-go="s2">Phase 1 · Assess</a>: Partner Center → Settings → Account settings → Programs → Cloud Solution Provider section. Then come back and re-run this Path Finder.</p>';
+  }else{
+    const pathA=wAns.status==='restricted';
+    html+='<h3>Your route: '+(pathA?'Path A — same tenant (status Restricted)':'Path B — new reseller tenant (status Active)')+'</h3><ol>';
+    if(pathA){
+      html+='<li><b>Phase 2 · Path A:</b> enroll the existing direct‑bill tenant in the Indirect Reseller program and accept the MPA (<a href="#" data-go="s3">open workflow</a>).</li>';
+    }else{
+      html+='<li><b>Decide first:</b> create a new reseller tenant (recommended — direct‑bill keeps running during migration), or ask Microsoft Support to move the account Active → Restricted and use Path A on the same tenant (<a href="#" data-go="s2">see the trade‑off</a>).</li>';
+      html+='<li><b>Phase 2 · Path B:</b> add a new business location (new PartnerID), create the new Entra tenant, enroll it, pass verification (~2–3 weeks), accept the MPA (<a href="#" data-go="s3">open workflow</a>).</li>';
+    }
+    if(wAns.provider==='no'){
+      html+='<li><b>Phase 3:</b> search Microsoft\u2019s official provider list, agree terms, then accept the provider\u2019s partnership invitation as Global admin (<a href="#" data-go="s4">open workflow</a>).</li>';
+    }else{
+      html+='<li><b>Phase 3 (short):</b> the chosen provider must be a Microsoft‑authorized indirect provider, and you still need to <b>accept their Partner Center partnership invitation</b> as Global admin before anything else works (<a href="#" data-go="s4">check</a>).</li>';
+    }
+    html+='<li><b>Phase 4:</b> connect every customer to the provider — relationship extension (consent required, no provider admin rights) or indirect reseller invitation (+ GDAP), and verify each customer\u2019s MCA acceptance through the provider (<a href="#" data-go="s5">open workflow</a>).</li>';
+    if(wAns.legacy==='yes'){
+      html+='<li><b>Phase 5 — with a pre‑step:</b> migrate legacy license‑based offers to new commerce and classic Azure to Azure plan <b>first</b>, then run the subscription transfers to the provider (<a href="#" data-go="s6">open workflow</a>).</li>';
+    }else if(wAns.legacy==='unsure'){
+      html+='<li><b>Phase 5 — audit first:</b> list all subscriptions and flag any legacy license‑based or classic Azure items — those must be migrated to new commerce before they can transfer. Then run the transfers (<a href="#" data-go="s6">open workflow</a>).</li>';
+    }else{
+      html+='<li><b>Phase 5:</b> run the self‑serve subscription transfers — the provider creates each transfer request; your Admin agent accepts and submits (<a href="#" data-go="s6">open workflow</a>).</li>';
+    }
+    html+='<li><b>Phase 6:</b> operate in dual mode while migrating, watch for the incentives invitation (within 30 days of IR enrollment), and plan around losing sandbox/API access (<a href="#" data-go="s7">open workflow</a>).</li>';
+    html+='</ol>';
+  }
+  out.innerHTML=html;
+  out.classList.add('show');
+  document.getElementById('wreset').style.display='inline-block';
+}
+
+/* ---------- MCA tool ---------- */
+const mcaData=[
+ {cls:'warn',html:'<b>Action required:</b> work with the indirect provider to have the customer <b>accept the Microsoft Customer Agreement</b>. The provider can confirm acceptance in Partner Center. Until then, the provider can\u2019t transact for this customer. <span class="chip provider">Provider leads</span> <span class="chip customer">Customer accepts</span>'},
+ {cls:'danger',html:'<b>Careful — the old acceptance does NOT carry over.</b> An MCA accepted via <b>partner attestation</b> with the direct‑bill partner is not retained when the customer moves. Work with the indirect provider to <b>re‑attest / update the customer\u2019s acceptance in Partner Center</b> before transferring anything. <span class="chip provider">Provider re‑attests</span> <span class="chip partner">Partner coordinates</span>'},
+ {cls:'ok',html:'<b>No action required.</b> An MCA the customer accepted directly in the <b>Microsoft 365 Admin Center</b> is kept when the reseller relationship with the indirect provider is established. Proceed to transfers once the relationship exists. <span class="chip customer">Already done</span>'}
+];
+document.querySelectorAll('[data-mca]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-mca]').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    const d=mcaData[+btn.dataset.mca];
+    const out=document.getElementById('mcaout');
+    out.className='mca-out show note '+d.cls;
+    out.innerHTML=d.html;
+  });
+});
+
+/* ---------- scenarios ---------- */
+const scen=[
+ {t:'We missed the $1M revenue requirement — our status flipped to Restricted',
+  s:'The partner no longer meets a direct‑bill requirement (revenue, support plan, security, or designation), so Microsoft moved the enrollment to Restricted. New direct customers and new direct orders are blocked; existing subscriptions still run.',
+  r:'<b>Path A, full sequence.</b><ol><li>Enroll the <b>same tenant</b> in the Indirect Reseller program and accept the MPA (Phase 2 · Path A).</li><li>Choose a provider and accept their invitation (Phase 3).</li><li>Connect every customer to the provider with consent + MCA checks (Phase 4).</li><li>Transfer all subscriptions to the provider (Phase 5).</li><li>Watch for the incentives invitation; manage direct + indirect incentives separately while both exist (Phase 6).</li></ol>',
+  w:'<span class="chip partner">Partner executes</span> <span class="chip ptc">PTC plans &amp; unblocks</span> <span class="chip provider">Provider onboards, orders, transfers</span>'},
+ {t:'We\u2019re still Active, but we want to move voluntarily',
+  s:'The partner meets requirements today but wants out of the direct‑bill overhead (billing, support plan cost, compliance).',
+  r:'<b>Choose deliberately between two routes:</b><ol><li><b>B1 · New tenant (lower risk):</b> direct‑bill stays fully functional while the new reseller tenant is built, verified (~2–3 weeks) and customers migrate at a comfortable pace. Matches Microsoft\u2019s two‑tenant recommendation.</li><li><b>B2 · Support ticket to Restrict:</b> ask Microsoft Support to move the account Active → Restricted, then run Path A on the same tenant. Simpler estate, but direct‑bill growth stops <i>immediately</i> on restriction — review the restricted‑capabilities page with the partner first.</li></ol>',
+  w:'<span class="chip ptc">PTC presents the trade‑off</span> <span class="chip partner">Partner decides &amp; executes</span> <span class="chip msft">Microsoft changes the status (B2)</span>'},
+ {t:'We already work with a distributor for hardware — can they be our provider?',
+  s:'The partner has an existing commercial distributor and wants to reuse the relationship.',
+  r:'Only if that distributor is a <b>Microsoft‑authorized Indirect Provider</b> for the partner\u2019s region — check the <a href="https://partner.microsoft.com/membership/cloud-solution-provider/find-a-provider" target="_blank">official directory</a>. If yes: agree CSP terms, then have them send the <b>Partner Center partnership invitation</b>, accepted by the partner\u2019s Global admin. An existing hardware contract does <b>not</b> create the CSP link — the invitation does.',
+  w:'<span class="chip partner">Partner verifies &amp; accepts</span> <span class="chip provider">Provider sends invitation</span>'},
+ {t:'Our provider needs admin access to customer tenants',
+  s:'The provider\u2019s managed service requires delegated administration of the customers\u2019 environments.',
+  r:'Don\u2019t use the relationship <b>extension</b> for these customers — it explicitly gives the provider <b>no admin privileges</b>. Instead, send those customers the <b>indirect reseller invitation</b>, and have the provider request <b>GDAP</b> from the customer. The partner separately requests its own GDAP to keep managing licenses and users.',
+  w:'<span class="chip partner">Partner sends invitation</span> <span class="chip customer">Customer approves GDAP</span> <span class="chip provider">Provider requests its access</span>'},
+ {t:'A customer signed the MCA through our attestation — is that still valid?',
+  s:'During direct‑bill days, the partner attested the customer\u2019s MCA acceptance in Partner Center.',
+  r:'<b>No — it is not retained</b> for the new chain. Work with the indirect provider to update/re‑attest the customer\u2019s MCA acceptance in Partner Center <b>before</b> any transfer. (Only acceptances the customer made themselves in the Microsoft 365 Admin Center carry over.) Use the MCA checker in Phase 4 for every customer.',
+  w:'<span class="chip provider">Provider re‑attests</span> <span class="chip partner">Partner tracks per customer</span>'},
+ {t:'We still have classic Azure and old license‑based subscriptions',
+  s:'Part of the customer base is on traditional (legacy) offers that pre‑date new commerce.',
+  r:'Legacy items <b>cannot transfer between partners</b>. Sequence per customer: <ol><li>Migrate legacy license‑based offers to <b>new commerce (NCE)</b>.</li><li>Migrate classic Azure to <b>Azure plan</b> (requires the customer\u2019s MCA).</li><li>Then run the standard transfer flow to the provider (Phase 5).</li></ol> Build this into the project timeline — migrations have their own term/renewal mechanics.',
+  w:'<span class="chip partner">Partner migrates &amp; submits transfers</span> <span class="chip provider">Provider creates transfer requests</span>'},
+ {t:'We might want to be direct‑bill again in a few years',
+  s:'The partner is transitioning now but expects to regrow past the requirements later.',
+  r:'Plan for it now: <ol><li>Prefer the <b>two‑tenant</b> structure — enrolling direct CSP on an indirect reseller tenant overrides the IR features.</li><li>To return, the partner <b>re‑applies with a new tenant</b> after meeting all requirements (including $1M trailing‑12‑month CSP revenue earned as an IR).</li><li>A transitioned partner must <b>wait one year</b> before reapplying.</li><li>Customers can then be moved from the indirect tenant to the new direct‑bill tenant.</li></ol>',
+  w:'<span class="chip ptc">PTC advises structure</span> <span class="chip partner">Partner re‑applies later</span> <span class="chip msft">Microsoft approves</span>'},
+ {t:'A customer hasn\u2019t accepted the relationship email',
+  s:'Transfers for one customer are blocked because they never clicked the acceptance link.',
+  r:'There is no workaround — the provider <b>cannot submit orders or transfers</b> for that customer until the reseller relationship exists, and for the extension route the partner is contractually required to have informed the customer and obtained consent. Actions: <ol><li>The partner re‑contacts the customer, explains that billing moves behind the scenes while their service and contacts stay the same, and resends the personalized link (don\u2019t edit it out of the email).</li><li>Track acceptance in the customer\u2019s M365 Admin Center → Partner relationships.</li><li>If a deadline looms (e.g., renewal), coordinate timing with the provider and escalate persistent blockers via the PTC CSP Community / Partner Support.</li></ol>',
+  w:'<span class="chip partner">Partner communicates</span> <span class="chip customer">Customer must accept</span> <span class="chip ptc">PTC escalates if stuck</span>'}
+];
+const scWrap=document.getElementById('scenarios');
+scen.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='scen';
+  d.innerHTML='<div class="scen-head"><span class="sn">S'+(i+1)+'</span><span class="t">'+s.t+'</span><span class="caret">▶</span></div>'+
+    '<div class="scen-body"><div class="lbl">Situation</div><p>'+s.s+'</p><div class="lbl">What to do</div><div>'+s.r+'</div><div class="lbl">Who does what</div><div class="chip-row">'+s.w+'</div></div>';
+  d.querySelector('.scen-head').addEventListener('click',()=>d.classList.toggle('open'));
+  scWrap.appendChild(d);
+});
+
+/* ---------- responsibility matrix ---------- */
+const CHIP={partner:'<span class="chip partner">Partner</span>',ptc:'<span class="chip ptc">PTC</span>',provider:'<span class="chip provider">Provider</span>',customer:'<span class="chip customer">Customer</span>',msft:'<span class="chip msft">Microsoft</span>'};
+const raci=[
+ ['Check direct‑bill enrollment status','Partner Center → Settings → Account settings → Programs',['partner'],['ptc']],
+ ['Request Active → Restricted status change','Service request to Partner Center support',['partner'],['msft']],
+ ['Add business location / new PartnerID (Path B)','Org Profile → Legal → Partner → Business locations',['partner'],['msft']],
+ ['Create new Entra ID tenant (Path B)','Per the official Entra quickstart',['partner'],['ptc']],
+ ['Enroll in Indirect Reseller program','Programs → Get started → Enroll now (or varEnrollment for new tenant)',['partner'],['msft']],
+ ['Account verification','Legal info checks; ~2–3 weeks for new tenants',['msft'],['partner']],
+ ['Accept Microsoft Partner Agreement (MPA)','Legally binding; per CSP tenant; enables IR capabilities',['partner'],[]],
+ ['Find &amp; evaluate indirect provider','Official directory; compare support, credit, tooling',['partner'],['ptc']],
+ ['Send partnership invitation','Email with personalized Partner Center link',['provider'],[]],
+ ['Accept partnership invitation','Global admin follows the link and accepts',['partner'],[]],
+ ['Inform customer &amp; obtain consent (extension)','Contractual obligation before extending the relationship',['partner'],['customer']],
+ ['Run reseller relationship extension','Admin agent → Customers → New relationship',['partner'],['provider']],
+ ['Send indirect reseller invitation','Customers → Invite new customers (keep the link intact)',['partner'],[]],
+ ['Accept reseller relationship','Customer authorizes partner + provider as resellers of record',['customer'],[]],
+ ['MCA acceptance / re‑attestation','Required through the provider for every transitioning customer',['customer','provider'],['partner']],
+ ['Request &amp; approve GDAP','Partner requests granular delegated admin; customer approves',['partner','customer'],['provider']],
+ ['Create tenants for brand‑new customers','IRs can\u2019t create customer tenants — the provider does',['provider'],['partner']],
+ ['Migrate legacy subscriptions to NCE / Azure plan','Prerequisite for any transfer of legacy items',['partner'],['provider']],
+ ['Create subscription transfer request','Includes customer email + source partner Microsoft ID',['provider'],[]],
+ ['Accept &amp; submit the transfer','Admin agent selects subscriptions and submits',['partner'],['msft']],
+ ['Complete the transfer (system)','New subscription on provider billing; old one canceled',['msft'],[]],
+ ['Bill customers after transition','Microsoft → provider → partner → customer',['provider','partner'],[]],
+ ['Send incentives invitation (within 30 days)','Tied to the MAICPP account email',['msft'],['partner']],
+ ['Enroll in incentive programs','Direct‑bill and IR incentives managed separately',['partner'],[]],
+ ['Plan for API/sandbox loss','Direct‑bill‑only capabilities; arrange provider tooling',['partner'],['ptc','provider']],
+ ['Escalate blockers','PTC CSP Community (PTCs) / Partner Center support (partners)',['ptc','partner'],['msft']]
+];
+const table=document.getElementById('raci');
+raci.forEach(r=>{
+  const tr=document.createElement('tr');
+  tr.dataset.roles=[...r[2],...r[3]].join(' ');
+  tr.innerHTML='<td class="task">'+r[0]+'<span class="detail">'+r[1]+'</span></td><td><div class="chip-row">'+r[2].map(x=>CHIP[x]).join('')+'</div></td><td><div class="chip-row">'+(r[3].length?r[3].map(x=>CHIP[x]).join(''):'<span style="color:var(--muted);font-size:.8rem">—</span>')+'</div></td>';
+  table.appendChild(tr);
+});
+document.querySelectorAll('#rolefilter button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#rolefilter button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    const role=btn.dataset.role;
+    table.querySelectorAll('tr[data-roles]').forEach(tr=>{
+      tr.classList.toggle('hidden',role!=='all'&&!tr.dataset.roles.split(' ').includes(role));
+    });
+  });
+});
+</script>
+</body>
+</html>
